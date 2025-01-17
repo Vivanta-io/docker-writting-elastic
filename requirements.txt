@@ -1,4 +1,1 @@
-pylint
-requests
-psycopg2-binary
-sqlalchemy
+elasticsearch

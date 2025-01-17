@@ -1,5 +1,5 @@
-# uri='036497184801.dkr.ecr.us-east-1.amazonaws.com/vivanta-whoop-application-initialization-prod'
-repository_name=""
+uri='036497184801.dkr.ecr.us-east-1.amazonaws.com/docker-writting-elastic'
+repository_name="docker-writting-elastic"
 aws_account_id="036497184801"
 region='us-east-1'
 aws_role='arn:aws:iam::036497184801:role/vivanta-lambda-stg'

@@ -4,8 +4,8 @@ services:
   app:
     platform: linux/arm64
     build: .
-    image:
-    container_name:
+    image: docker-writting-elastic
+    container_name: docker-writting-elastic
     volumes:
       - .:/var/task
     env_file:
