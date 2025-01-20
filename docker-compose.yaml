@@ -11,7 +11,7 @@ services:
     env_file:
       - .env
     ports:
-      - "9001:8080"
+      - "9010:8080"
     networks:
       - lambda_postgres_network
 
