@@ -7,24 +7,42 @@ ELASTIC_PORT = os.environ.get('ELASTIC_PORT')
 ELASTIC_STRING = f'{ELASTIC_ENDPOINT}:{ELASTIC_PORT}'
 ELASTIC_KEY = os.environ.get('ELASTIC_KEY')
 
+DICTS_TO_KEYS = [
+    'hypnogram', "heart_rate_samples"
+]
+
+def convert_time_series_to_list(time_series):
+    return [{"time": time, "value": value} for time, value in time_series.items()]
+
+def payload_with_replaced_dict_keys(payload):
+    for key in DICTS_TO_KEYS:
+        if key in payload:
+            payload[key] = convert_time_series_to_list(payload[key])
+    return payload
+
 def __send_to_elastic(index_name, doc):
-    es_client = Elasticsearch(ELASTIC_STRING, api_key=ELASTIC_KEY) 
-    response = es_client.index(index=index_name, document=doc)
-    print(f'Indexing document in {index_name} index: {type(doc)}', doc)
+    try:
+        es_client = Elasticsearch(ELASTIC_STRING, api_key=ELASTIC_KEY)
+        doc_payload = doc.get('payload', {})
+        doc['payload'] = payload_with_replaced_dict_keys(doc_payload)
+        response = es_client.index(index=index_name, document=doc)
+    except Exception as e:
+        print(f'Error indexing document in {index_name} index: {str(e)}')
+        response = {}
     return response
 
 def __send_doc_splitted(index_name:str = None, doc:dict = None):
     if not index_name:
         raise ValueError('Index name is required')
     if not doc:
-        raise ValueError('Document is required')
+        return {}
     if 'payload' in doc:
         if isinstance(doc['payload'], list):
             for payload in doc['payload']:
                 doc_to_send = doc.copy()
                 doc_to_send['payload'] = payload
                 __send_to_elastic(index_name, doc_to_send)
-        else:
+        elif isinstance(doc['payload'], dict):
             __send_to_elastic(index_name, doc)
     else:
         __send_to_elastic(index_name, doc)
@@ -33,9 +51,6 @@ def __send_doc_splitted(index_name:str = None, doc:dict = None):
 
 def lambda_handler(event, context):
     try:
-        # Connect to Elasticsearch
-        print('ELASTIC_STRING', ELASTIC_STRING)
-        print('ELASTIC_KEY', ELASTIC_KEY)
         es_client = Elasticsearch(ELASTIC_STRING, api_key=ELASTIC_KEY) 
         # API key should have cluster monitor rights
         info = es_client.info()
@@ -44,8 +59,9 @@ def lambda_handler(event, context):
         for record in event['Records']:
             message = record['body']
             message_json = json.loads(message)
+            # print(f'Message received: {message_json}')
             doc = message_json.get('doc', {})
-            index_name = message_json.get('index', {})
+            index_name = message_json.get('index_name', {})
             doc = __send_doc_splitted(index_name, doc)
 
         return {
