@@ -5,6 +5,7 @@ output_tests/*
 npm_dependencies/*
 deployments
 .env.production
+.env.stg
 .env.dev
 .env.aws
 code.zip

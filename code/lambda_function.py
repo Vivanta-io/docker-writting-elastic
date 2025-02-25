@@ -59,10 +59,15 @@ def lambda_handler(event, context):
         for record in event['Records']:
             message = record['body']
             message_json = json.loads(message)
-            # print(f'Message received: {message_json}')
+            print(f'Message received: {message_json}')
             doc = message_json.get('doc', {})
+            docs = message_json.get('docs', [])
             index_name = message_json.get('index_name', {})
-            doc = __send_doc_splitted(index_name, doc)
+            if len(docs) > 0:
+                for doc in docs:
+                    doc = __send_doc_splitted(index_name, doc)
+            else:
+                doc = __send_doc_splitted(index_name, doc)
 
         return {
             'statusCode': 200,
