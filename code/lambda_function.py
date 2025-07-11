@@ -1,6 +1,8 @@
 import os
 from elasticsearch import Elasticsearch
 import json
+import sentry_sdk
+from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 
 ELASTIC_ENDPOINT = os.environ.get('ELASTIC_ENDPOINT')
 ELASTIC_PORT = os.environ.get('ELASTIC_PORT')
@@ -10,6 +12,13 @@ ELASTIC_KEY = os.environ.get('ELASTIC_KEY')
 DICTS_TO_KEYS = [
     'hypnogram', "heart_rate_samples", "timeOffsetSleepSpo2", "timeOffsetSleepRespiration", "timeOffsetSpo2Values", "timeOffsetHeartRateSamples"
 ]
+
+sentry_sdk.init(
+    dsn=os.getenv('SENTRY_DSN'),
+    send_default_pii=True,
+    environment=os.getenv('ENV'),
+    integrations=[AwsLambdaIntegration()]
+)
 
 def convert_time_series_to_list(time_series):
     return [{"time": time, "value": value} for time, value in time_series.items()]
@@ -27,6 +36,7 @@ def __send_to_elastic_payload(index_name, doc):
         doc['payload'] = payload_with_replaced_dict_keys(doc_payload)
         response = es_client.index(index=index_name, document=doc)
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         print(f'Error indexing document in {index_name} index: {str(e)}')
         response = {}
     return response
@@ -36,6 +46,7 @@ def __send_to_elastic(index_name, doc):
         es_client = Elasticsearch(ELASTIC_STRING, api_key=ELASTIC_KEY)
         response = es_client.index(index=index_name, document=doc)
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         print(f'Error indexing document in {index_name} index: {str(e)}')
         response = {}
     return response
@@ -83,6 +94,7 @@ def lambda_handler(event, context):
         }
 
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         return {
             'statusCode': 500,
             'body': json.dumps({'message': f'Error indexing documents: {str(e)}'})
